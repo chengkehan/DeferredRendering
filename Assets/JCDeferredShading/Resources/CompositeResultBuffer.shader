@@ -36,14 +36,23 @@
 		v2f vert(appdata v)
 		{
 			v2f o;
+			UNITY_INITIALIZE_OUTPUT(v2f, o);
+
 			o.vertex = v.vertex;
 			o.uv = v.uv;
+
+			#ifdef UV_UPSIDE_DOWN
+				o.uv.y = 1 - o.uv.y;
+			#endif
+
 			return o;
 		}
 
 		v2f vert_point_lighting(appdata v)
 		{
 			v2f o;
+			UNITY_INITIALIZE_OUTPUT(v2f, o);
+
 			o.vertex = UnityObjectToClipPos(v.vertex);
 			o.pos = o.vertex;
 			o.uv = v.uv;
@@ -99,6 +108,7 @@
 	SubShader
 	{
 		// Directional Lighting
+		// Normal uv orientation
 		Pass
 		{
 			Blend One One
@@ -109,6 +119,22 @@
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag_dir_lighting
+			ENDCG
+		}
+
+		// Directional Lighting
+		// Upside down uv orientation(UV_STARTS_AT_TOP)
+		Pass
+		{
+			Blend One One
+			ZTest Always
+			ZWrite Off
+			Cull Front
+
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag_dir_lighting
+			#pragma shader_feature UV_UPSIDE_DOWN UV_UPSIDE_DOWN_OFF
 			ENDCG
 		}
 

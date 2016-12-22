@@ -134,13 +134,13 @@ public class JCDeferredShadingCamera : MonoBehaviour
                 compositeResultBufferMtrl.SetVector(shaderPropId_pointLightPos, light.transform.position);
                 compositeResultBufferMtrl.SetColor(shaderPropId_pointLightColor, light.color);
                 compositeResultBufferMtrl.SetVector(shaderPropId_pointLightRange, new Vector4(1.0f / light.range, light.intensity, 0, 0));
-                compositeResultBufferMtrl.SetPass(1);
+                compositeResultBufferMtrl.SetPass(2);
                 Graphics.DrawMeshNow(pointLightMesh, Matrix4x4.TRS(light.transform.position, Quaternion.identity, Vector3.one * light.range * 2));
             }
         }
 
         Graphics.SetRenderTarget(null);
-        DrawScreenQuad(compositeResultBufferMtrl, 2, true, true);
+        DrawScreenQuad(compositeResultBufferMtrl, 3, true, true);
     }
 
     private void OnGUI()
@@ -217,29 +217,29 @@ public class JCDeferredShadingCamera : MonoBehaviour
     private void DrawScreenQuad(Material mtrl, int pass, bool isScreen, bool clearScreen)
     {
 		GraphicsDeviceType type = SystemInfo.graphicsDeviceType;
-		bool isOpenGL = 
+		bool isOpenGLLike = 
 			type == GraphicsDeviceType.OpenGL2 || 
 			type == GraphicsDeviceType.OpenGLCore || 
 			type == GraphicsDeviceType.OpenGLES2 || 
 			type == GraphicsDeviceType.OpenGLES3;
 
-		bool flag = isOpenGL || isScreen;
+		bool isUvUpsideDown = isOpenGLLike || isScreen;
 
         if (clearScreen)
         {
             GL.Clear(true, true, Color.black);
         }
-        mtrl.SetPass(pass);
+        mtrl.SetPass(isUvUpsideDown ? pass : (pass + 1));
         GL.PushMatrix();
         GL.Begin(GL.QUADS);
-        GL.TexCoord2(0, flag ? 0 : 1);
+        GL.TexCoord2(0, 0);
         GL.Vertex3(-1, -1, 0);
-		GL.TexCoord2(flag ? 0 : 1, 1);
-		GL.Vertex3(flag ? -1 : 1, flag ? 1 : -1, 0);
-		GL.TexCoord2(1, flag ? 1 : 0);
+		GL.TexCoord2(0, 1);
+		GL.Vertex3(-1, 1, 0);
+		GL.TexCoord2(1, 1);
         GL.Vertex3(1, 1, 0);
-		GL.TexCoord2(flag ? 1 : 0, 0);
-		GL.Vertex3(flag ? 1 : -1, flag ? -1 : 1, 0);
+		GL.TexCoord2(1, 0);
+		GL.Vertex3(1, -1, 0);
         GL.End();
         GL.PopMatrix();
     }
