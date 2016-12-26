@@ -41,9 +41,8 @@
 			o.vertex = v.vertex;
 			o.uv = v.uv;
 
-			#ifdef UV_UPSIDE_DOWN
+			if (_ProjectionParams.x < 0)
 				o.uv.y = 1 - o.uv.y;
-			#endif
 
 			return o;
 		}
@@ -134,7 +133,6 @@
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag_dir_lighting
-			#pragma shader_feature UV_UPSIDE_DOWN UV_UPSIDE_DOWN_OFF
 			ENDCG
 		}
 
