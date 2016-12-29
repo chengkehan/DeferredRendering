@@ -81,7 +81,7 @@ namespace JCDeferredShading
             isDestroyed = true;
         }
 
-        public void Reset(int width, int height)
+        public void ResetSize(int width, int height)
         {
             CheckIsDestroyed();
             CheckSize(width, height);
@@ -107,6 +107,35 @@ namespace JCDeferredShading
                     }
                 }
             }
+        }
+
+        public static void SetMultipleRenderTargets(Camera camera, JCDSRenderTexture colorBuffers, JCDSRenderTexture depthBuffer, int depthBufferIndex)
+        {
+            if(camera == null || colorBuffers == null || depthBuffer == null)
+            {
+                throw new System.ArgumentNullException();
+            }
+
+            camera.SetTargetBuffers(colorBuffers.GetColorBuffers(), depthBuffer.GetDepthBuffer(depthBufferIndex));
+        }
+
+        public void SetActiveRenderTexture(int index)
+        {
+            CheckIsDestroyed();
+            CheckIndex(index);
+
+            RenderTexture rt = GetRenderTexture(index);
+            Graphics.SetRenderTarget(rt);
+        }
+
+        public static void ResetActiveRenderTexture()
+        {
+            Graphics.SetRenderTarget(null);
+        }
+
+        public static void ClearActiveRenderTexture(bool clearDepth, bool clearColor, Color backgroundColor, float defaultDepthValue)
+        {
+            GL.Clear(clearDepth, clearColor, backgroundColor, defaultDepthValue);
         }
 
         public RenderTexture[] GetRenderTextures()

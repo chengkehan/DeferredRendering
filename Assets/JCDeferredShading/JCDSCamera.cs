@@ -26,8 +26,10 @@ namespace JCDeferredShading
         // 1 : diffuse(rgb) shininess(a)
         // 2 : normal(rgb)
         // 3 : position(rgb)
-        // 4 : result (rgb)
-        private JCDSRenderTexture rts = null;
+        private JCDSRenderTexture mrtGBuffer = null;
+
+        // 1 : result (rgb) depth
+        private JCDSRenderTexture resultRT = null;
 
         private Material compositeResultBufferMtrl = null;
 
@@ -74,10 +76,16 @@ namespace JCDeferredShading
             shaderPropId_pointLightColor = Shader.PropertyToID("_PointLightColor");
             shaderPropId_pointLightRange = Shader.PropertyToID("_PointLightRange");
 
-            rts = new JCDSRenderTexture(
-                4, Screen.width, Screen.height, 
-                JCDSRenderTexture.ValueToMask(new bool[] { true }), 
+            mrtGBuffer = new JCDSRenderTexture(
+                3, Screen.width, Screen.height,
+                JCDSRenderTexture.ValueToMask(null), 
                 RenderTextureFormat.ARGBHalf, FilterMode.Point, false
+            );
+
+            resultRT = new JCDSRenderTexture(
+                1, Screen.width, Screen.height,
+                JCDSRenderTexture.ValueToMask(new bool[] { true }), 
+                RenderTextureFormat.ARGB32, FilterMode.Point, false    
             );
 
             CollectLights();
@@ -85,10 +93,15 @@ namespace JCDeferredShading
 
         private void OnDestroy()
         {
-            if (rts != null)
+            if (mrtGBuffer != null)
             {
-                rts.Destroy();
-                rts = null;
+                mrtGBuffer.Destroy();
+                mrtGBuffer = null;
+            }
+            if(resultRT != null)
+            {
+                resultRT.Destroy();
+                resultRT = null;
             }
 
             s_instance = null;
@@ -96,19 +109,21 @@ namespace JCDeferredShading
 
         private void OnPreRender()
         {
-            rts.Reset(Screen.width, Screen.height);
+            mrtGBuffer.ResetSize(Screen.width, Screen.height);
+            resultRT.ResetSize(Screen.width, Screen.height);
 
-            cam.SetTargetBuffers(rts.GetColorBuffers(), rts.GetDepthBuffer(0));
+            JCDSRenderTexture.SetMultipleRenderTargets(cam, mrtGBuffer, resultRT, 0);
         }
 
         private void OnPostRender()
         {
-            Graphics.SetRenderTarget(rts.GetColorBuffer(3), rts.GetDepthBuffer(0));
+            resultRT.SetActiveRenderTexture(0);
+            JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 0.0f);
 
-            compositeResultBufferMtrl.SetTexture(shaderPropId_diffuseBuffer, rts.GetRenderTexture(0));
-            compositeResultBufferMtrl.SetTexture(shaderPropId_normalBuffer, rts.GetRenderTexture(1));
-            compositeResultBufferMtrl.SetTexture(shaderPropId_positionBuffer, rts.GetRenderTexture(2));
-            compositeResultBufferMtrl.SetTexture(shaderPropId_resultBuffer, rts.GetRenderTexture(3));
+            compositeResultBufferMtrl.SetTexture(shaderPropId_diffuseBuffer, mrtGBuffer.GetRenderTexture(0));
+            compositeResultBufferMtrl.SetTexture(shaderPropId_normalBuffer, mrtGBuffer.GetRenderTexture(1));
+            compositeResultBufferMtrl.SetTexture(shaderPropId_positionBuffer, mrtGBuffer.GetRenderTexture(2));
+            compositeResultBufferMtrl.SetTexture(shaderPropId_resultBuffer, resultRT.GetRenderTexture(0));
 
             int numDirLights = dirLights == null ? 0 : dirLights.Length;
             for (int i = 0; i < numDirLights; ++i)
@@ -137,7 +152,7 @@ namespace JCDeferredShading
                 }
             }
 
-            Graphics.SetRenderTarget(null);
+            JCDSRenderTexture.ResetActiveRenderTexture();
             DrawScreenQuad(compositeResultBufferMtrl, 3, true, true);
         }
 
@@ -147,11 +162,11 @@ namespace JCDeferredShading
             {
                 int width = (int)(Screen.width * 0.25f);
                 int height = (int)(Screen.height * 0.25f);
-                int numRTs = rts.numRTs;
+                int numRTs = mrtGBuffer.numRTs;
                 Rect rect = new Rect(0, 0, width, height);
                 for (int i = 0; i < numRTs; ++i)
                 {
-                    GUI.DrawTexture(rect, rts.GetRenderTexture(i), ScaleMode.ScaleToFit, false);
+                    GUI.DrawTexture(rect, mrtGBuffer.GetRenderTexture(i), ScaleMode.ScaleToFit, false);
                     rect.y += height;
                 }
             }
