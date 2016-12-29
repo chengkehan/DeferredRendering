@@ -43,6 +43,8 @@ namespace JCDeferredShading
         private int shaderPropId_resultBuffer = 0;
         private int shaderPropId_ssrBuffer = 0;
 
+        private int shaderPropId_ssrVPMatrix = 0;
+
         private int shaderPropId_dirLightDir = 0;
         private int shaderPropId_dirLightColor = 0;
         private int shaderPropId_dirLightIntensity = 0;
@@ -75,6 +77,8 @@ namespace JCDeferredShading
             shaderPropId_positionBuffer = Shader.PropertyToID("_PositionBuffer");
             shaderPropId_resultBuffer = Shader.PropertyToID("_ResultBuffer");
             shaderPropId_ssrBuffer = Shader.PropertyToID("_SSRBuffer");
+
+            shaderPropId_ssrVPMatrix = Shader.PropertyToID("_SSR_VP_MATRIX");
 
             shaderPropId_dirLightDir = Shader.PropertyToID("_DirLightDir");
             shaderPropId_dirLightColor = Shader.PropertyToID("_DirLightColor");
@@ -188,6 +192,7 @@ namespace JCDeferredShading
             ssrMtrl.SetTexture(shaderPropId_normalBuffer, mrtGBuffer.GetRenderTexture(1));
             ssrMtrl.SetTexture(shaderPropId_positionBuffer, mrtGBuffer.GetRenderTexture(2));
             ssrMtrl.SetTexture(shaderPropId_resultBuffer, resultRT.GetRenderTexture(0));
+            ssrMtrl.SetMatrix(shaderPropId_ssrVPMatrix, cam.projectionMatrix * cam.worldToCameraMatrix);
             ssrRT.SetActiveRenderTexture(0);
             JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 1.0f);
             DrawScreenQuad(ssrMtrl, 0, false, false);

@@ -7,6 +7,8 @@ uniform sampler2D _PositionBuffer;
 uniform sampler2D _ResultBuffer;
 uniform sampler2D _SSRBuffer;
 
+uniform float4x4 _SSR_VP_MATRIX;
+
 uniform float4 _DirLightDir;
 uniform fixed4 _DirLightColor;
 

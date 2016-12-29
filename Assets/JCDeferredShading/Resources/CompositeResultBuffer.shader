@@ -40,7 +40,7 @@
 			float3 wLightDir_norm = normalize(wLightDir);
 			float3 wNormal = tex2D(_NormalBuffer, screenUV);
 			float3 wEyePos = _WorldSpaceCameraPos.xyz;
-			float3 wEyeDir = normalize(wEyePos - wFragPos);
+			float3 wEyeDir = normalize(wEyePos - wFragPos.xyz);
 			float3 wHalf = normalize(wEyeDir + wLightDir_norm);
 			float wNdotH = max(0, dot(wHalf, wNormal));
 			float specular = pow(wNdotH, diffuse.a);
@@ -59,7 +59,7 @@
 		{
 			fixed4 resultC = tex2D(_ResultBuffer, i.uv);
 			fixed4 ssrC = tex2D(_SSRBuffer, i.uv);
-			fixed4 c = resultC + ssrC;
+			fixed4 c = /*resultC + */ssrC;
 			return c;
 		}
 

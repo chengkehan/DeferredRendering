@@ -11,8 +11,40 @@
 
 		fixed4 frag(v2f i) : SV_Target
 		{
-			fixed4 col = tex2D(_NormalBuffer, i.uv);
-			return 0;
+			fixed4 c = fixed4(0,0,0,0);
+			float2 screenUV = i.uv;
+
+			float4 wFragPos = tex2D(_PositionBuffer, screenUV);
+			if (wFragPos.w == 0)
+			{
+				return c;
+			}
+			else
+			{
+				float3 wNormal = tex2D(_NormalBuffer, screenUV);
+				float3 wEyePos = _WorldSpaceCameraPos.xyz;
+				float3 wEyeDir = normalize(wEyePos - wFragPos.xyz);
+				float3 wRefl = reflect(-wEyeDir, wNormal);
+				
+				float3 check_wpos;
+				for (int i = 1; i < 11; ++i)
+				{
+					float3 check_wpos = wFragPos.xyz + wRefl * 0.1 * i;
+					float4 check_vp_pos = mul(_SSR_VP_MATRIX, float4(check_wpos, 1));
+					float2 check_screen_uv = check_vp_pos.xy / check_vp_pos.w * 0.5 + 0.5;
+					#if UNITY_UV_STARTS_AT_TOP
+						check_screen_uv.y = 1 - check_screen_uv.y;
+					#endif
+					float4 check_wFragPos = tex2D(_PositionBuffer, check_screen_uv);
+					if (check_vp_pos.z > check_wFragPos.w)
+					{
+						c = tex2D(_ResultBuffer, check_screen_uv);
+						break;
+					}
+				}
+
+				return c;
+			}
 		}
 	ENDCG
 
