@@ -7,45 +7,7 @@
 	CGINCLUDE
 	
 		#include "UnityCG.cginc"
-
-		struct appdata
-		{
-			float4 vertex : POSITION;
-			float2 uv : TEXCOORD0;
-		};
-
-		struct v2f
-		{
-			float2 uv : TEXCOORD0;
-			float4 pos : TEXCOORD1;
-			float4 vertex : SV_POSITION;
-		};
-
-		uniform sampler2D _DiffuseBuffer;
-		uniform sampler2D _NormalBuffer;
-		uniform sampler2D _PositionBuffer;
-		uniform sampler2D _ResultBuffer;
-
-		uniform float4 _DirLightDir;
-		uniform fixed4 _DirLightColor;
-
-		uniform float3 _PointLightPos;
-		uniform fixed4 _PointLightColor;
-		uniform float4 _PointLightRange;
-
-		v2f vert(appdata v)
-		{
-			v2f o;
-			UNITY_INITIALIZE_OUTPUT(v2f, o);
-
-			o.vertex = v.vertex;
-			o.uv = v.uv;
-
-			if (_ProjectionParams.x < 0)
-				o.uv.y = 1 - o.uv.y;
-
-			return o;
-		}
+		#include "JCDSInclude.cginc"
 
 		v2f vert_point_lighting(appdata v)
 		{
@@ -70,11 +32,7 @@
 
 		float4 frag_point_lighting(v2f i) : SV_Target
 		{
-			float2 screenUV = i.pos.xy / i.pos.w * 0.5 + 0.5;
-
-			#if UNITY_UV_STARTS_AT_TOP
-				screenUV.y = 1.0 - screenUV.y;
-			#endif
+			float2 screenUV = pos_to_screen_uv(i.pos);
 
 			float4 diffuse = tex2D(_DiffuseBuffer, screenUV);
 			float4 wFragPos = tex2D(_PositionBuffer, screenUV);
@@ -99,7 +57,10 @@
 
 		float4 frag_result(v2f i) : SV_Target
 		{
-			return tex2D(_ResultBuffer, i.uv);
+			fixed4 resultC = tex2D(_ResultBuffer, i.uv);
+			fixed4 ssrC = tex2D(_SSRBuffer, i.uv);
+			fixed4 c = resultC + ssrC;
+			return c;
 		}
 
 	ENDCG
@@ -116,7 +77,7 @@
 			Cull Back
 
 			CGPROGRAM
-			#pragma vertex vert
+			#pragma vertex vert_screen_quad
 			#pragma fragment frag_dir_lighting
 			ENDCG
 		}
@@ -131,7 +92,7 @@
 			Cull Front
 
 			CGPROGRAM
-			#pragma vertex vert
+			#pragma vertex vert_screen_quad
 			#pragma fragment frag_dir_lighting
 			ENDCG
 		}
@@ -154,7 +115,7 @@
 		Pass
 		{
 			CGPROGRAM
-			#pragma vertex vert
+			#pragma vertex vert_screen_quad
 			#pragma fragment frag_result
 			ENDCG
 		}

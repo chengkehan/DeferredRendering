@@ -23,20 +23,25 @@ namespace JCDeferredShading
 
         private Camera cam = null;
 
-        // 1 : diffuse(rgb) shininess(a)
-        // 2 : normal(rgb)
-        // 3 : position(rgb)
+        // 0 : diffuse(rgb) shininess(a)
+        // 1 : normal(rgb)
+        // 2 : position(rgb) depth(a)
         private JCDSRenderTexture mrtGBuffer = null;
 
-        // 1 : result (rgb) depth
+        // 0 : result (rgb) depthBuffer
         private JCDSRenderTexture resultRT = null;
 
+        // 0 : ssr (rgb)
+        private JCDSRenderTexture ssrRT = null;
+
         private Material compositeResultBufferMtrl = null;
+        private Material ssrMtrl = null;
 
         private int shaderPropId_diffuseBuffer = 0;
         private int shaderPropId_normalBuffer = 0;
         private int shaderPropId_positionBuffer = 0;
         private int shaderPropId_resultBuffer = 0;
+        private int shaderPropId_ssrBuffer = 0;
 
         private int shaderPropId_dirLightDir = 0;
         private int shaderPropId_dirLightColor = 0;
@@ -63,11 +68,13 @@ namespace JCDeferredShading
             cam = GetComponent<Camera>();
 
             compositeResultBufferMtrl = new Material(Shader.Find("Hidden/JCDeferredShading/CompositeResultBuffer"));
+            ssrMtrl = new Material(Shader.Find("Hidden/JCDeferredShading/ScreenSpaceReflection"));
 
             shaderPropId_diffuseBuffer = Shader.PropertyToID("_DiffuseBuffer");
             shaderPropId_normalBuffer = Shader.PropertyToID("_NormalBuffer");
             shaderPropId_positionBuffer = Shader.PropertyToID("_PositionBuffer");
             shaderPropId_resultBuffer = Shader.PropertyToID("_ResultBuffer");
+            shaderPropId_ssrBuffer = Shader.PropertyToID("_SSRBuffer");
 
             shaderPropId_dirLightDir = Shader.PropertyToID("_DirLightDir");
             shaderPropId_dirLightColor = Shader.PropertyToID("_DirLightColor");
@@ -88,6 +95,12 @@ namespace JCDeferredShading
                 RenderTextureFormat.ARGB32, FilterMode.Point, false    
             );
 
+            ssrRT = new JCDSRenderTexture(
+                1, Screen.width, Screen.height,
+                JCDSRenderTexture.ValueToMask(null), 
+                RenderTextureFormat.ARGB32, FilterMode.Point, false
+            );
+
             CollectLights();
         }
 
@@ -103,6 +116,23 @@ namespace JCDeferredShading
                 resultRT.Destroy();
                 resultRT = null;
             }
+            if(ssrRT != null)
+            {
+                ssrRT.Destroy();
+                ssrRT = null;
+            }
+
+            if(compositeResultBufferMtrl != null)
+            {
+                Material.Destroy(compositeResultBufferMtrl);
+                compositeResultBufferMtrl = null;
+            }
+
+            if(ssrMtrl != null)
+            {
+                Material.Destroy(ssrMtrl);
+                ssrMtrl = null;
+            }
 
             s_instance = null;
         }
@@ -111,6 +141,7 @@ namespace JCDeferredShading
         {
             mrtGBuffer.ResetSize(Screen.width, Screen.height);
             resultRT.ResetSize(Screen.width, Screen.height);
+            ssrRT.ResetSize(Screen.width, Screen.height);
 
             JCDSRenderTexture.SetMultipleRenderTargets(cam, mrtGBuffer, resultRT, 0);
         }
@@ -124,6 +155,7 @@ namespace JCDeferredShading
             compositeResultBufferMtrl.SetTexture(shaderPropId_normalBuffer, mrtGBuffer.GetRenderTexture(1));
             compositeResultBufferMtrl.SetTexture(shaderPropId_positionBuffer, mrtGBuffer.GetRenderTexture(2));
             compositeResultBufferMtrl.SetTexture(shaderPropId_resultBuffer, resultRT.GetRenderTexture(0));
+            compositeResultBufferMtrl.SetTexture(shaderPropId_ssrBuffer, ssrRT.GetRenderTexture(0));
 
             int numDirLights = dirLights == null ? 0 : dirLights.Length;
             for (int i = 0; i < numDirLights; ++i)
@@ -152,6 +184,14 @@ namespace JCDeferredShading
                 }
             }
 
+            ssrMtrl.SetTexture(shaderPropId_diffuseBuffer, mrtGBuffer.GetRenderTexture(0));
+            ssrMtrl.SetTexture(shaderPropId_normalBuffer, mrtGBuffer.GetRenderTexture(1));
+            ssrMtrl.SetTexture(shaderPropId_positionBuffer, mrtGBuffer.GetRenderTexture(2));
+            ssrMtrl.SetTexture(shaderPropId_resultBuffer, resultRT.GetRenderTexture(0));
+            ssrRT.SetActiveRenderTexture(0);
+            JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 1.0f);
+            DrawScreenQuad(ssrMtrl, 0, false, false);
+
             JCDSRenderTexture.ResetActiveRenderTexture();
             DrawScreenQuad(compositeResultBufferMtrl, 3, true, true);
         }
@@ -163,12 +203,13 @@ namespace JCDeferredShading
                 int width = Screen.width / 4;
                 int height = Screen.height / 4;
                 Rect rect = new Rect(0, 0, width, height);
-                OnGUI_DrawRTs(mrtGBuffer, ref rect);
-                OnGUI_DrawRTs(resultRT, ref rect);
+                OnGUI_DrawRTs(mrtGBuffer, ref rect, true);
+                OnGUI_DrawRTs(ssrRT, ref rect, false);
+                OnGUI_DrawRTs(resultRT, ref rect, false);
             }
         }
 
-        private void OnGUI_DrawRTs(JCDSRenderTexture rt, ref Rect rect)
+        private void OnGUI_DrawRTs(JCDSRenderTexture rt, ref Rect rect, bool isNewColumn)
         {
             int numRTs = rt.numRTs;
             for (int i = 0; i < numRTs; ++i)
@@ -176,8 +217,11 @@ namespace JCDeferredShading
                 GUI.DrawTexture(rect, rt.GetRenderTexture(i), ScaleMode.ScaleToFit, false);
                 rect.y += rect.height;
             }
-            rect.x += rect.width;
-            rect.y = 0;
+            if (isNewColumn)
+            {
+                rect.x += rect.width;
+                rect.y = 0;
+            }
         }
 
         public void CollectLights()
