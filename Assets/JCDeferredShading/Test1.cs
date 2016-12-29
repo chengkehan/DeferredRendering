@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using JCDeferredShading;
 
 public class Test1 : MonoBehaviour
 {
@@ -52,9 +53,9 @@ public class Test1 : MonoBehaviour
             lightObj.light.GetComponent<Rigidbody>().isKinematic = false;
             lightObj.light.GetComponent<Rigidbody>().AddForce(transform.up*1000, ForceMode.Acceleration);
 
-            if(JCDeferredShadingCamera.instance != null)
+            if(JCDSCamera.instance != null)
             {
-                JCDeferredShadingCamera.instance.CollectLights();
+                JCDSCamera.instance.CollectLights();
             }
         }
 
