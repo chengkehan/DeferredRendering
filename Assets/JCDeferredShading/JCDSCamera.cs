@@ -160,16 +160,24 @@ namespace JCDeferredShading
         {
             if (debug)
             {
-                int width = (int)(Screen.width * 0.25f);
-                int height = (int)(Screen.height * 0.25f);
-                int numRTs = mrtGBuffer.numRTs;
+                int width = Screen.width / 4;
+                int height = Screen.height / 4;
                 Rect rect = new Rect(0, 0, width, height);
-                for (int i = 0; i < numRTs; ++i)
-                {
-                    GUI.DrawTexture(rect, mrtGBuffer.GetRenderTexture(i), ScaleMode.ScaleToFit, false);
-                    rect.y += height;
-                }
+                OnGUI_DrawRTs(mrtGBuffer, ref rect);
+                OnGUI_DrawRTs(resultRT, ref rect);
             }
+        }
+
+        private void OnGUI_DrawRTs(JCDSRenderTexture rt, ref Rect rect)
+        {
+            int numRTs = rt.numRTs;
+            for (int i = 0; i < numRTs; ++i)
+            {
+                GUI.DrawTexture(rect, rt.GetRenderTexture(i), ScaleMode.ScaleToFit, false);
+                rect.y += rect.height;
+            }
+            rect.x += rect.width;
+            rect.y = 0;
         }
 
         public void CollectLights()
