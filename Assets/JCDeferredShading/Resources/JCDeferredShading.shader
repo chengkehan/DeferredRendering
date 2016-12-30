@@ -5,6 +5,7 @@
 		_MainTex ("Texture", 2D) = "white" {}
 		_BumpMap("Bump Map", 2D) = "bump" {}
 		_Shininess("Shininess", Range(0.1, 500)) = 50
+		_BumpIntensity("Bump Intensity", Range(0.1, 1)) = 1
 	}
 	SubShader
 	{
@@ -36,6 +37,7 @@
 				float3 wTangent : TEXCOORD3;
 				float3 wBinormal : TEXCOORD4;
 				float3 wPos : TEXCOORD5;
+				float4 mvp_pos : TEXCOORD6;
 			};
 
 			struct ps_out
@@ -52,11 +54,13 @@
 			float4 _BumpMap_ST;
 			
 			float _Shininess;
+			float _BumpIntensity;
 
 			v2f vert (appdata v)
 			{
 				v2f o;
-				o.vertex = UnityObjectToClipPos(v.vertex);
+				o.mvp_pos = UnityObjectToClipPos(v.vertex);
+				o.vertex = o.mvp_pos;
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				o.uv_bump = TRANSFORM_TEX(v.uv, _BumpMap);
 
@@ -76,12 +80,13 @@
 
 				fixed4 col = tex2D(_MainTex, i.uv);
 				float3 normal = UnpackNormal(tex2D(_BumpMap, i.uv_bump));
+				normal = lerp(float3(0,0,1), normal, _BumpIntensity);
 				float3x3 worldToTangent = float3x3(i.wTangent, i.wBinormal, i.wNormal);
 				float3 wNormal = normalize(mul(normal, worldToTangent))/*tangent to world*/;
 
 				o.diffuse = float4(col.rgb, _Shininess);
 				o.normal = float4(wNormal, 1);
-				o.position = float4(i.wPos, i.vertex.z);
+				o.position = float4(i.wPos, i.mvp_pos.z);
 
 				return o;
 			}

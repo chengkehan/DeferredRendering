@@ -27,9 +27,9 @@
 				float3 wRefl = reflect(-wEyeDir, wNormal);
 				
 				float3 check_wpos;
-				for (int i = 1; i < 11; ++i)
+				for (int i = 1; i < 21; ++i)
 				{
-					float3 check_wpos = wFragPos.xyz + wRefl * 0.1 * i;
+					float3 check_wpos = wFragPos.xyz + wRefl * 0.3 * i;
 					float4 check_vp_pos = mul(_SSR_VP_MATRIX, float4(check_wpos, 1));
 					float2 check_screen_uv = check_vp_pos.xy / check_vp_pos.w * 0.5 + 0.5;
 					#if UNITY_UV_STARTS_AT_TOP
@@ -38,7 +38,7 @@
 					float4 check_wFragPos = tex2D(_PositionBuffer, check_screen_uv);
 					if (check_vp_pos.z > check_wFragPos.w)
 					{
-						c = tex2D(_ResultBuffer, check_screen_uv);
+						c = tex2D(_ResultBuffer, check_screen_uv) * (1 - saturate(length(check_wFragPos.xyz - wFragPos.xyz) / 6.0));
 						break;
 					}
 				}
