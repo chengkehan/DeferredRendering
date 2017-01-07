@@ -22,6 +22,7 @@ namespace JCDeferredShading
         public Mesh pointLightMesh = null;
 
         private Camera cam = null;
+        private Camera doubleFaceDepthCam = null;
 
         // 0 : diffuse(rgb) shininess(a)
         // 1 : normal(rgb)
@@ -34,14 +35,21 @@ namespace JCDeferredShading
         // 0 : ssr (rgb)
         private JCDSRenderTexture ssrRT = null;
 
+        // 0 : fonrt face depth(r) back face depth(g)
+        private JCDSRenderTexture doubleFaceDepthRT = null;
+
         private Material compositeResultBufferMtrl = null;
         private Material ssrMtrl = null;
+
+        private Shader frontFaceDepthShader = null;
+        private Shader backFaceDepthShader = null;
 
         private int shaderPropId_diffuseBuffer = 0;
         private int shaderPropId_normalBuffer = 0;
         private int shaderPropId_positionBuffer = 0;
         private int shaderPropId_resultBuffer = 0;
         private int shaderPropId_ssrBuffer = 0;
+        private int shaderPropId_doubleFaceDepthBuffer = 0;
 
         private int shaderPropId_ssrVPMatrix = 0;
 
@@ -72,11 +80,15 @@ namespace JCDeferredShading
             compositeResultBufferMtrl = new Material(Shader.Find("Hidden/JCDeferredShading/CompositeResultBuffer"));
             ssrMtrl = new Material(Shader.Find("Hidden/JCDeferredShading/ScreenSpaceReflection"));
 
+            frontFaceDepthShader = Shader.Find("Hidden/JCDeferredShading/FrontFaceDepth");
+            backFaceDepthShader = Shader.Find("Hidden/JCDeferredShading/BackFaceDepth");
+
             shaderPropId_diffuseBuffer = Shader.PropertyToID("_DiffuseBuffer");
             shaderPropId_normalBuffer = Shader.PropertyToID("_NormalBuffer");
             shaderPropId_positionBuffer = Shader.PropertyToID("_PositionBuffer");
             shaderPropId_resultBuffer = Shader.PropertyToID("_ResultBuffer");
             shaderPropId_ssrBuffer = Shader.PropertyToID("_SSRBuffer");
+            shaderPropId_doubleFaceDepthBuffer = Shader.PropertyToID("_DoubleFaceDepthBuffer");
 
             shaderPropId_ssrVPMatrix = Shader.PropertyToID("_SSR_VP_MATRIX");
 
@@ -105,7 +117,15 @@ namespace JCDeferredShading
                 RenderTextureFormat.ARGB32, FilterMode.Point, false
             );
 
+            doubleFaceDepthRT = new JCDSRenderTexture(
+                1, Screen.width, Screen.height, 
+                JCDSRenderTexture.ValueToMask(new bool[] { true }),
+                RenderTextureFormat.ARGBHalf, FilterMode.Point, false 
+            );
+
             CollectLights();
+
+            CreateDoubleFaceDepthCamera();
         }
 
         private void OnDestroy()
@@ -125,6 +145,11 @@ namespace JCDeferredShading
                 ssrRT.Destroy();
                 ssrRT = null;
             }
+            if(doubleFaceDepthRT != null)
+            {
+                doubleFaceDepthRT.Destroy();
+                doubleFaceDepthRT = null;
+            }
 
             if(compositeResultBufferMtrl != null)
             {
@@ -138,6 +163,9 @@ namespace JCDeferredShading
                 ssrMtrl = null;
             }
 
+            frontFaceDepthShader = null;
+            backFaceDepthShader = null;
+
             s_instance = null;
         }
 
@@ -146,12 +174,20 @@ namespace JCDeferredShading
             mrtGBuffer.ResetSize(Screen.width, Screen.height);
             resultRT.ResetSize(Screen.width, Screen.height);
             ssrRT.ResetSize(Screen.width, Screen.height);
+            doubleFaceDepthRT.ResetSize(Screen.width, Screen.height);
 
             JCDSRenderTexture.SetMultipleRenderTargets(cam, mrtGBuffer, resultRT, 0);
         }
 
         private void OnPostRender()
         {
+            doubleFaceDepthRT.SetActiveRenderTexture(0);
+            JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 1.0f);
+            JCDSRenderTexture.SetMultipleRenderTargets(doubleFaceDepthCam, doubleFaceDepthRT, doubleFaceDepthRT, 0);
+            doubleFaceDepthCam.RenderWithShader(frontFaceDepthShader, null);
+            JCDSRenderTexture.ClearActiveRenderTexture(true, false, Color.black, 1.0f);
+            doubleFaceDepthCam.RenderWithShader(backFaceDepthShader, null);
+
             resultRT.SetActiveRenderTexture(0);
             JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 0.0f);
 
@@ -165,7 +201,7 @@ namespace JCDeferredShading
             for (int i = 0; i < numDirLights; ++i)
             {
                 Light light = dirLights[i];
-                if (light != null)
+                if (light != null && light.enabled && light.gameObject.activeSelf)
                 {
                     Vector3 dir = -light.transform.forward;
                     compositeResultBufferMtrl.SetVector(shaderPropId_dirLightDir, new Vector4(dir.x, dir.y, dir.z, light.intensity));
@@ -178,7 +214,7 @@ namespace JCDeferredShading
             for (int i = 0; i < numPointLights; ++i)
             {
                 Light light = pointLights[i];
-                if (light != null)
+                if (light != null && light.enabled && light.gameObject.activeSelf)
                 {
                     compositeResultBufferMtrl.SetVector(shaderPropId_pointLightPos, light.transform.position);
                     compositeResultBufferMtrl.SetColor(shaderPropId_pointLightColor, light.color);
@@ -192,6 +228,7 @@ namespace JCDeferredShading
             ssrMtrl.SetTexture(shaderPropId_normalBuffer, mrtGBuffer.GetRenderTexture(1));
             ssrMtrl.SetTexture(shaderPropId_positionBuffer, mrtGBuffer.GetRenderTexture(2));
             ssrMtrl.SetTexture(shaderPropId_resultBuffer, resultRT.GetRenderTexture(0));
+            ssrMtrl.SetTexture(shaderPropId_doubleFaceDepthBuffer, doubleFaceDepthRT.GetRenderTexture(0));
             ssrMtrl.SetMatrix(shaderPropId_ssrVPMatrix, cam.projectionMatrix * cam.worldToCameraMatrix);
             ssrRT.SetActiveRenderTexture(0);
             JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 1.0f);
@@ -210,7 +247,8 @@ namespace JCDeferredShading
                 Rect rect = new Rect(0, 0, width, height);
                 OnGUI_DrawRTs(mrtGBuffer, ref rect, true);
                 OnGUI_DrawRTs(ssrRT, ref rect, false);
-                OnGUI_DrawRTs(resultRT, ref rect, false);
+                OnGUI_DrawRTs(resultRT, ref rect, true);
+                OnGUI_DrawRTs(doubleFaceDepthRT, ref rect, false);
             }
         }
 
@@ -227,6 +265,26 @@ namespace JCDeferredShading
                 rect.x += rect.width;
                 rect.y = 0;
             }
+        }
+
+        private void CreateDoubleFaceDepthCamera()
+        {
+            GameObject go = new GameObject("DoubleFaceDepthCameraGo");
+            go.hideFlags = HideFlags.HideAndDontSave;
+            go.transform.parent = cam.transform;
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localEulerAngles = Vector3.zero;
+            go.transform.localScale = Vector3.one;
+
+            doubleFaceDepthCam = go.AddComponent<Camera>();
+            doubleFaceDepthCam.enabled = false;
+            doubleFaceDepthCam.cullingMask = cam.cullingMask;
+            doubleFaceDepthCam.fieldOfView = cam.fieldOfView;
+            doubleFaceDepthCam.orthographic = cam.orthographic;
+            doubleFaceDepthCam.nearClipPlane = cam.nearClipPlane;
+            doubleFaceDepthCam.farClipPlane = cam.farClipPlane;
+            doubleFaceDepthCam.rect = cam.rect;
+            doubleFaceDepthCam.clearFlags = CameraClearFlags.Nothing;
         }
 
         public void CollectLights()

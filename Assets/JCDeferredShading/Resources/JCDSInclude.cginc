@@ -6,6 +6,7 @@ uniform sampler2D _NormalBuffer;
 uniform sampler2D _PositionBuffer;
 uniform sampler2D _ResultBuffer;
 uniform sampler2D _SSRBuffer;
+uniform sampler2D _DoubleFaceDepthBuffer;
 
 uniform float4x4 _SSR_VP_MATRIX;
 
@@ -52,6 +53,41 @@ inline float2 pos_to_screen_uv(float4 pos)
 #endif
 
 	return screenUV;
+}
+
+struct ps_out_double_fade_depth
+{
+	float4 depth : SV_TARGET0;
+};
+
+v2f vert_double_face_depth(appdata v)
+{
+	v2f o;
+	UNITY_INITIALIZE_OUTPUT(v2f, o);
+
+	o.vertex = UnityObjectToClipPos(v.vertex);
+	o.pos = o.vertex;
+	return o;
+}
+
+ps_out_double_fade_depth frag_front_face_depth(v2f i)
+{
+	ps_out_double_fade_depth o;
+	UNITY_INITIALIZE_OUTPUT(ps_out_double_fade_depth, o);
+
+	float4 depth = float4(i.pos.z, 0, 0, 0);
+	o.depth = depth;
+	return o;
+}
+
+ps_out_double_fade_depth frag_back_face_depth(v2f i)
+{
+	ps_out_double_fade_depth o;
+	UNITY_INITIALIZE_OUTPUT(ps_out_double_fade_depth, o);
+
+	float4 depth = float4(0, i.pos.z, 0, 0);
+	o.depth = depth;
+	return o;
 }
 
 #endif

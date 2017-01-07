@@ -13,7 +13,7 @@
 		{
 			fixed4 c = fixed4(0,0,0,0);
 			float2 screenUV = i.uv;
-
+			
 			float4 wFragPos = tex2D(_PositionBuffer, screenUV);
 			if (wFragPos.w == 0)
 			{
@@ -33,7 +33,9 @@
 					float4 check_vp_pos = mul(_SSR_VP_MATRIX, float4(check_wpos, 1));
 					float2 check_screen_uv = check_vp_pos.xy / check_vp_pos.w * 0.5 + 0.5;
 					float4 check_wFragPos = tex2D(_PositionBuffer, check_screen_uv);
-					if (check_vp_pos.z > check_wFragPos.w)
+					float4 doubleFaceDepth = tex2D(_DoubleFaceDepthBuffer, check_screen_uv);
+					//if (check_vp_pos.z > check_wFragPos.w)
+					if (check_vp_pos.z > doubleFaceDepth.x && check_vp_pos.z < doubleFaceDepth.y)
 					{
 						c = tex2D(_ResultBuffer, check_screen_uv) * (1 - saturate(length(check_wFragPos.xyz - wFragPos.xyz) / 6.0));
 						break;
