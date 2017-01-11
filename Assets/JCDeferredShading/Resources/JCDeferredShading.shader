@@ -86,7 +86,7 @@
 
 				o.diffuse = float4(col.rgb, _Shininess);
 				o.normal = float4(wNormal, 1);
-				o.position = float4(i.wPos, i.mvp_pos.z);
+				o.position = float4(i.wPos, 1);
 
 				return o;
 			}

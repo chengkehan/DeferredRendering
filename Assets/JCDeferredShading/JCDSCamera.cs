@@ -26,7 +26,7 @@ namespace JCDeferredShading
 
         // 0 : diffuse(rgb) shininess(a)
         // 1 : normal(rgb)
-        // 2 : position(rgb) depth(a)
+        // 2 : position(rgb)
         private JCDSRenderTexture mrtGBuffer = null;
 
         // 0 : result (rgb) depthBuffer
