@@ -37,7 +37,6 @@
 				float3 wTangent : TEXCOORD3;
 				float3 wBinormal : TEXCOORD4;
 				float3 wPos : TEXCOORD5;
-				float4 mvp_pos : TEXCOORD6;
 			};
 
 			struct ps_out
@@ -59,8 +58,7 @@
 			v2f vert (appdata v)
 			{
 				v2f o;
-				o.mvp_pos = UnityObjectToClipPos(v.vertex);
-				o.vertex = o.mvp_pos;
+				o.vertex = UnityObjectToClipPos(v.vertex);
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				o.uv_bump = TRANSFORM_TEX(v.uv, _BumpMap);
 
