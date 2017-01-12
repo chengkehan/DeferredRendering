@@ -69,13 +69,6 @@ namespace JCDeferredShading
 
         private void Awake()
         {
-            if (!SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf))
-            {
-                Debug.LogError("Unsupported RenderTexture Format ARGBHalf");
-                Destroy(this);
-                return;
-            }
-
             s_instance = this;
 
             cam = GetComponent<Camera>();
@@ -126,7 +119,7 @@ namespace JCDeferredShading
             doubleFaceDepthRT = new JCDSRenderTexture(
                 1, Screen.width, Screen.height, 
                 JCDSRenderTexture.ValueToMask(new bool[] { true }),
-                RenderTextureFormat.ARGBHalf, FilterMode.Point, false 
+                RenderTextureFormat.ARGBFloat, FilterMode.Point, false 
             );
 
             CollectLights();
