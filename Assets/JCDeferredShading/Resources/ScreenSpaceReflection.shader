@@ -61,11 +61,12 @@
 
 				float depthTolerance = 0;
 				float startOffsetFactor = 2;
+				float stepScale = 1.5;
 				float vPosZ = vPos0.z + dVPosZ*startOffsetFactor;
 				float2 pixel = pixel0 + dPixel*startOffsetFactor;
 				float count = 0;
 				float loop = 100;
-				for (; /*pixel.x * __sign < pixel1.x * __sign*/count < loop; pixel += dPixel, vPosZ += dVPosZ, ++count)
+				for (; /*pixel.x * __sign < pixel1.x * __sign*/count < loop; pixel += dPixel*stepScale, vPosZ += dVPosZ*stepScale, ++count)
 				{
 					float2 unswappedPixel = isSwapped ? pixel.yx : pixel.xy;
 					float2 uv = unswappedPixel / _ScreenPixelSize;
@@ -77,7 +78,7 @@
 					// vPosZ and doubleFaceDepth.xy are negative values
 					if (vPosZ < doubleFaceDepth.x-depthTolerance && vPosZ > doubleFaceDepth.y+depthTolerance)
 					{
-						c = tex2D(_ResultBuffer, uv) * min((1 - (count / loop)) * 2, 1);
+						c = tex2D(_ResultBuffer, uv) * min((1 - (count / loop)) * 1.5, 1);
 						break;
 					}
 				}

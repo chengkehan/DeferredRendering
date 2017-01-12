@@ -59,7 +59,7 @@
 		{
 			fixed4 resultC = tex2D(_ResultBuffer, i.uv);
 			fixed4 ssrC = tex2D(_SSRBuffer, i.uv);
-			fixed4 c = resultC + ssrC * ssrC * 1.3;
+			fixed4 c = resultC + resultC * ssrC * 2;
 			return c;
 		}
 
