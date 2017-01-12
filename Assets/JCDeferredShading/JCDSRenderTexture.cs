@@ -5,6 +5,10 @@ namespace JCDeferredShading
 {
     public class JCDSRenderTexture
     {
+        private static RenderBuffer currentActiveColorBuffer;
+
+        private static RenderBuffer currentActiveDepthBuffer;
+
         private RenderTexture[] rts = null;
 
         private RenderBuffer[] colorBuffers = null;
@@ -117,6 +121,17 @@ namespace JCDeferredShading
             }
 
             camera.SetTargetBuffers(colorBuffers.GetColorBuffers(), depthBuffer.GetDepthBuffer(depthBufferIndex));
+        }
+
+        public static void StoreCurrentActiveBuffers()
+        {
+            currentActiveColorBuffer = Graphics.activeColorBuffer;
+            currentActiveDepthBuffer = Graphics.activeDepthBuffer;
+        }
+
+        public static void RestoreCurrentActiveBuffers(Camera camera)
+        {
+            camera.SetTargetBuffers(currentActiveColorBuffer, currentActiveDepthBuffer);
         }
 
         public void SetActiveRenderTexture(int index)

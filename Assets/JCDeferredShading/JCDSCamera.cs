@@ -182,6 +182,7 @@ namespace JCDeferredShading
             ssrRT.ResetSize(Screen.width, Screen.height);
             doubleFaceDepthRT.ResetSize(Screen.width, Screen.height);
 
+            JCDSRenderTexture.StoreCurrentActiveBuffers();
             JCDSRenderTexture.SetMultipleRenderTargets(cam, mrtGBuffer, resultRT, 0);
         }
 
@@ -244,6 +245,8 @@ namespace JCDeferredShading
 
             JCDSRenderTexture.ResetActiveRenderTexture();
             DrawScreenQuad(compositeResultBufferMtrl, 3, true, true);
+
+            JCDSRenderTexture.RestoreCurrentActiveBuffers(cam);
         }
 
         private void OnGUI()
