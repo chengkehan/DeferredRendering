@@ -26,17 +26,47 @@
 				float3 wEyeDir = normalize(wEyePos - wFragPos.xyz);
 				float3 wRefl = reflect(-wEyeDir, wNormal);
 				
-				float3 check_wpos;
-				for (int i = 1; i < 21; ++i)
+				float3 vRefl = mul(_SSR_V_MATRIX, float4(wRefl, 0)).xyz;
+				float3 vPos0 = mul(_SSR_V_MATRIX, float4(wFragPos.xyz, 1)).xyz;
+				float3 vPos1 = vPos0 + vRefl;
+				float4 clipPos0 = mul(_SSR_P_MATRIX, float4(vPos0, 1));
+				float4 clipPos1 = mul(_SSR_P_MATRIX, float4(vPos1, 1));
+				float2 uv0 = clipPos0.xy / clipPos0.w * 0.5 + 0.5;
+				float2 uv1 = clipPos1.xy / clipPos1.w * 0.5 + 0.5;
+				float2 pixel0 = uv0 * _ScreenPixelSize;
+				float2 pixel1 = uv1 * _ScreenPixelSize;
+
+				float2 delta = pixel1 - pixel0;
+				bool isSwapped = false;
+				if (abs(delta.x) < abs(delta.y))
 				{
-					float3 check_wpos = wFragPos.xyz + wRefl * 0.3 * i;
-					float4 check_vp_pos = mul(_SSR_VP_MATRIX, float4(check_wpos, 1));
-					float2 check_screen_uv = check_vp_pos.xy / check_vp_pos.w * 0.5 + 0.5;
-					float4 check_wFragPos = tex2D(_PositionBuffer, check_screen_uv);
-					float4 doubleFaceDepth = tex2D(_DoubleFaceDepthBuffer, check_screen_uv);
-					if (check_vp_pos.z > doubleFaceDepth.x && check_vp_pos.z < doubleFaceDepth.y)
+					isSwapped = true;
+					delta.xy = delta.yx;
+					pixel0.xy = pixel0.yx;
+					pixel1.xy = pixel1.yx;
+				}
+				float signDir = sign(delta.x);
+				if (signDir == 0)
+				{
+					return c;
+				}
+				float invdx = signDir / delta.x;
+				float2 dPixel = float2(signDir, delta.y * invdx);
+				float dVPosZ = (vPos1.z - vPos0.z) * invdx;
+
+				float vPosZ = vPos0.z + dVPosZ;
+				float2 pixel = pixel0 + dPixel;
+				float count = 0;
+				float loop = 100;
+				for (; /*pixel.x * __sign < pixel1.x * __sign*/count < loop; pixel += dPixel, vPosZ += dVPosZ, ++count)
+				{
+					float2 unswappedPixel = isSwapped ? pixel.yx : pixel.xy;
+					float2 uv = unswappedPixel / _ScreenPixelSize;
+					float4 doubleFaceDepth = tex2D(_DoubleFaceDepthBuffer, uv);
+					// vPosZ and doubleFaceDepth.xy are negative values
+					if (vPosZ < doubleFaceDepth.x && vPosZ > doubleFaceDepth.y)
 					{
-						c = tex2D(_ResultBuffer, check_screen_uv) * (1 - saturate(length(check_wFragPos.xyz - wFragPos.xyz) / 6.0));
+						c = tex2D(_ResultBuffer, uv) * (1 - (count / loop));
 						break;
 					}
 				}

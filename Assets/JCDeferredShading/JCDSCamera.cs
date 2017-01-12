@@ -51,7 +51,10 @@ namespace JCDeferredShading
         private int shaderPropId_ssrBuffer = 0;
         private int shaderPropId_doubleFaceDepthBuffer = 0;
 
-        private int shaderPropId_ssrVPMatrix = 0;
+        private int shaderPropId_ssrVMatrix = 0;
+        private int shaderPropId_ssrPMatrix = 0;
+
+        private int shaderPropId_screenPixelSize = 0;
 
         private int shaderPropId_dirLightDir = 0;
         private int shaderPropId_dirLightColor = 0;
@@ -90,7 +93,10 @@ namespace JCDeferredShading
             shaderPropId_ssrBuffer = Shader.PropertyToID("_SSRBuffer");
             shaderPropId_doubleFaceDepthBuffer = Shader.PropertyToID("_DoubleFaceDepthBuffer");
 
-            shaderPropId_ssrVPMatrix = Shader.PropertyToID("_SSR_VP_MATRIX");
+            shaderPropId_ssrVMatrix = Shader.PropertyToID("_SSR_V_MATRIX");
+            shaderPropId_ssrPMatrix = Shader.PropertyToID("_SSR_P_MATRIX");
+
+            shaderPropId_screenPixelSize = Shader.PropertyToID("_ScreenPixelSize");
 
             shaderPropId_dirLightDir = Shader.PropertyToID("_DirLightDir");
             shaderPropId_dirLightColor = Shader.PropertyToID("_DirLightColor");
@@ -229,7 +235,9 @@ namespace JCDeferredShading
             ssrMtrl.SetTexture(shaderPropId_positionBuffer, mrtGBuffer.GetRenderTexture(2));
             ssrMtrl.SetTexture(shaderPropId_resultBuffer, resultRT.GetRenderTexture(0));
             ssrMtrl.SetTexture(shaderPropId_doubleFaceDepthBuffer, doubleFaceDepthRT.GetRenderTexture(0));
-            ssrMtrl.SetMatrix(shaderPropId_ssrVPMatrix, cam.projectionMatrix * cam.worldToCameraMatrix);
+            ssrMtrl.SetMatrix(shaderPropId_ssrVMatrix, cam.worldToCameraMatrix);
+            ssrMtrl.SetMatrix(shaderPropId_ssrPMatrix, cam.projectionMatrix);
+            ssrMtrl.SetVector(shaderPropId_screenPixelSize, new Vector2(Screen.width, Screen.height));
             ssrRT.SetActiveRenderTexture(0);
             JCDSRenderTexture.ClearActiveRenderTexture(true, true, Color.black, 1.0f);
             DrawScreenQuad(ssrMtrl, 0, false, false);

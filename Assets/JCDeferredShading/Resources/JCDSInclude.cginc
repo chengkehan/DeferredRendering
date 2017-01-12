@@ -9,6 +9,10 @@ uniform sampler2D _SSRBuffer;
 uniform sampler2D _DoubleFaceDepthBuffer;
 
 uniform float4x4 _SSR_VP_MATRIX;
+uniform float4x4 _SSR_V_MATRIX;
+uniform float4x4 _SSR_P_MATRIX;
+
+uniform float2 _ScreenPixelSize;
 
 uniform float4 _DirLightDir;
 uniform fixed4 _DirLightColor;
@@ -66,7 +70,7 @@ v2f vert_double_face_depth(appdata v)
 	UNITY_INITIALIZE_OUTPUT(v2f, o);
 
 	o.vertex = UnityObjectToClipPos(v.vertex);
-	o.pos = o.vertex;
+	o.pos = mul(UNITY_MATRIX_V, mul(unity_ObjectToWorld, v.vertex));
 	return o;
 }
 
